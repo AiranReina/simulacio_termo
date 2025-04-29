@@ -23,7 +23,7 @@ k = 1.4E-23 # Boltzmann constant
 T = 300 # around room temperature
 T_termostat = 300 # temperature of the thermostat
 dt = 1E-5
-steps = 20
+steps = 10
 
 animation = canvas( width=win, height=win, align='left')
 animation.range = L
@@ -117,14 +117,12 @@ nhisto = 0 # number of histogram snapshots to average
 
 radis.append(0.001)
 for i in range(10): radis.append((i+1) * 0.01)
-m_paret = 0.1E-3
 
 plt.style.use('classic')
 plt.figure(figsize=(10,6), facecolor='white')
 for radi in radis:
     Ratom = radi
     step_counter = 0
-    L_list = []
     preasure = []
     time = []
     
@@ -183,11 +181,10 @@ for radi in radis:
         
         # APLICACIÓ DEL TERMOSTAT D'ANDERSEN
         preasure_step = []
-        L_list.append(L)
     
         for i in range(Natoms):
             loc = apos[i]
-            if abs(loc.x) > L_list[-1]/2:
+            if abs(loc.x) > L/2:
                 v_old = p[i].mag / mass
                 v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
                 p[i].x = -sign(loc.x) * mass * abs(v_termal)
@@ -195,7 +192,7 @@ for radi in radis:
                 interchange(v_old, v_new)
                 preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
             
-            if abs(loc.y) > L_list[-1]/2:
+            if abs(loc.y) > L/2:
                 v_old = p[i].mag / mass
                 v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
                 p[i].y = -sign(loc.y) * mass * abs(v_termal)
@@ -203,7 +200,7 @@ for radi in radis:
                 interchange(v_old, v_new)
                 preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
             
-            if abs(loc.z) > L_list[-1]/2:
+            if abs(loc.z) > L/2:
                 v_old = p[i].mag / mass
                 v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
                 p[i].z = -sign(loc.z) * mass * abs(v_termal)
@@ -215,13 +212,12 @@ for radi in radis:
         
         time.append(step_counter * dt)
         preasure.append(sum(preasure_step))
-        L = (2 * preasure[-1] * (L_list[-1] ** 2) * (dt ** 2)) / m_paret
         
     plt.plot(time, preasure, label = f'Radi = {radi}')
 
 p_teorica = []
-for l in L_list: p_teorica.append(Natoms * k * T / l**3)
-#plt.plot(time, p_teorica, label = 'Teòrica', linestyle='--', color='black')
+for t in time: p_teorica.append(Natoms * k * T / L**3)
+plt.plot(time, p_teorica, label = 'Teòrica', linestyle='--', color='black')
 plt.title('Pressió en funció del temps')
 plt.xlabel(r'Temps ($s$)')
 plt.ylabel(r'Pressió ($Pa$)') 
