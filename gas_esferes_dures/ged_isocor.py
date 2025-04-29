@@ -1,5 +1,7 @@
 from vpython import *
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 #Web VPython 3.2
 
@@ -16,10 +18,12 @@ L = 1 # container is a cube L on a side
 gray = color.gray(0.7) # color of edges of container
 mass = 4E-3/6E23 # helium mass
 Ratom = 0.03 # wildly exaggerated size of helium atom
+radis = []
 k = 1.4E-23 # Boltzmann constant
 T = 300 # around room temperature
-T_termostat = 373
+T_termostat = 300 # temperature of the thermostat
 dt = 1E-5
+steps = 100
 
 animation = canvas( width=win, height=win, align='left')
 animation.range = L
@@ -111,79 +115,121 @@ def checkCollisions():
 
 nhisto = 0 # number of histogram snapshots to average
 
-while True:
-    rate(300)
-    # Accumulate and average histogram snapshots
-    for i in range(len(accum)): accum[i][1] = (nhisto*accum[i][1] + histo[i])/(nhisto+1)
-    if nhisto % 10 == 0:
-        vdist.data = accum
-    nhisto += 1
+radis.append(0.001)
+for i in range(10): radis.append((i+1) * 0.01)
 
-    # Update all positions
-    for i in range(Natoms): Atoms[i].pos = apos[i] = apos[i] + (p[i]/mass)*dt
+plt.style.use('classic')
+plt.figure(figsize=(10,6), facecolor='white')
+for radi in radis:
+    Ratom = radi
+    step_counter = 0
+    preasure = []
+    time = []
     
-    # Check for collisions
-    hitlist = checkCollisions()
+    while step_counter < steps:
+        rate(300)
+        # Accumulate and average histogram snapshots
+        for i in range(len(accum)): accum[i][1] = (nhisto*accum[i][1] + histo[i])/(nhisto+1)
+        if nhisto % 10 == 0:
+            vdist.data = accum
+        nhisto += 1
 
-    # If any collisions took place, update momenta of the two atoms
-    for ij in hitlist:
-        i = ij[0]
-        j = ij[1]
-        ptot = p[i]+p[j]
-        posi = apos[i]
-        posj = apos[j]
-        vi = p[i]/mass
-        vj = p[j]/mass
-        vrel = vj-vi
-        a = vrel.mag2
-        if a == 0: continue;  # exactly same velocities
-        rrel = posi-posj
-        if rrel.mag > Ratom: continue # one atom went all the way through another
+        # Update all positions
+        for i in range(Natoms): Atoms[i].pos = apos[i] = apos[i] + (p[i]/mass)*dt
+        
+        # Check for collisions
+        hitlist = checkCollisions()
+
+        # If any collisions took place, update momenta of the two atoms
+        for ij in hitlist:
+            i = ij[0]
+            j = ij[1]
+            ptot = p[i]+p[j]
+            posi = apos[i]
+            posj = apos[j]
+            vi = p[i]/mass
+            vj = p[j]/mass
+            vrel = vj-vi
+            a = vrel.mag2
+            if a == 0: continue;  # exactly same velocities
+            rrel = posi-posj
+            if rrel.mag > Ratom: continue # one atom went all the way through another
+        
+            # theta is the angle between vrel and rrel:
+            dx = dot(rrel, vrel.hat)       # rrel.mag*cos(theta)
+            dy = cross(rrel, vrel.hat).mag # rrel.mag*sin(theta)
+            # alpha is the angle of the triangle composed of rrel, path of atom j, and a line
+            #   from the center of atom i to the center of atom j where atome j hits atom i:
+            alpha = asin(dy/(2*Ratom)) 
+            d = (2*Ratom)*cos(alpha)-dx # distance traveled into the atom from first contact
+            deltat = d/vrel.mag         # time spent moving from first contact to position inside atom
+            
+            posi = posi-vi*deltat # back up to contact configuration
+            posj = posj-vj*deltat
+            mtot = 2*mass
+            pcmi = p[i]-ptot*mass/mtot # transform momenta to cm frame
+            pcmj = p[j]-ptot*mass/mtot
+            rrel = norm(rrel)
+            pcmi = pcmi-2*pcmi.dot(rrel)*rrel # bounce in cm frame
+            pcmj = pcmj-2*pcmj.dot(rrel)*rrel
+            p[i] = pcmi+ptot*mass/mtot # transform momenta back to lab frame
+            p[j] = pcmj+ptot*mass/mtot
+            apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time
+            apos[j] = posj+(p[j]/mass)*deltat
+            interchange(vi.mag, p[i].mag/mass)
+            interchange(vj.mag, p[j].mag/mass)
+        
+        # APLICACIÓ DEL TERMOSTAT D'ANDERSEN
+        preasure_step = []
     
-        # theta is the angle between vrel and rrel:
-        dx = dot(rrel, vrel.hat)       # rrel.mag*cos(theta)
-        dy = cross(rrel, vrel.hat).mag # rrel.mag*sin(theta)
-        # alpha is the angle of the triangle composed of rrel, path of atom j, and a line
-        #   from the center of atom i to the center of atom j where atome j hits atom i:
-        alpha = asin(dy/(2*Ratom)) 
-        d = (2*Ratom)*cos(alpha)-dx # distance traveled into the atom from first contact
-        deltat = d/vrel.mag         # time spent moving from first contact to position inside atom
+        for i in range(Natoms):
+            loc = apos[i]
+            if abs(loc.x) > L/2:
+                v_old = p[i].mag / mass
+                v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
+                p[i].x = -sign(loc.x) * mass * abs(v_termal)
+                v_new = p[i].mag / mass
+                interchange(v_old, v_new)
+                preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
+            
+            if abs(loc.y) > L/2:
+                v_old = p[i].mag / mass
+                v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
+                p[i].y = -sign(loc.y) * mass * abs(v_termal)
+                v_new = p[i].mag / mass
+                interchange(v_old, v_new)
+                preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
+            
+            if abs(loc.z) > L/2:
+                v_old = p[i].mag / mass
+                v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
+                p[i].z = -sign(loc.z) * mass * abs(v_termal)
+                v_new = p[i].mag / mass
+                interchange(v_old, v_new)
+                preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
         
-        posi = posi-vi*deltat # back up to contact configuration
-        posj = posj-vj*deltat
-        mtot = 2*mass
-        pcmi = p[i]-ptot*mass/mtot # transform momenta to cm frame
-        pcmj = p[j]-ptot*mass/mtot
-        rrel = norm(rrel)
-        pcmi = pcmi-2*pcmi.dot(rrel)*rrel # bounce in cm frame
-        pcmj = pcmj-2*pcmj.dot(rrel)*rrel
-        p[i] = pcmi+ptot*mass/mtot # transform momenta back to lab frame
-        p[j] = pcmj+ptot*mass/mtot
-        apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time
-        apos[j] = posj+(p[j]/mass)*deltat
-        interchange(vi.mag, p[i].mag/mass)
-        interchange(vj.mag, p[j].mag/mass)
-    
-    # APLICACIÓ DEL TERMOSTAT D'ANDERSEN
-    for i in range(Natoms):
-        loc = apos[i]
-        if abs(loc.x) > L/2:
-            v_old = p[i].mag / mass
-            v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
-            p[i].x = -sign(loc.x) * mass * abs(v_termal)
-            v_new = p[i].mag / mass
-            interchange(v_old, v_new)
+        step_counter += 1
         
-        if abs(loc.y) > L/2:
-            v_old = p[i].mag / mass
-            v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
-            p[i].y = -sign(loc.y) * mass * abs(v_termal)
-            v_new = p[i].mag / mass
-            interchange(v_old, v_new)
+        time.append(step_counter * dt)
+        preasure.append(sum(preasure_step))
         
-        if abs(loc.z) > L/2:
-            v_old = p[i].mag / mass
-            v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
-            p[i].z = -sign(loc.z) * mass * abs(v_termal)
-            v_new = p[i].mag / mass
-            interchange(v_old, v_new)
+    plt.plot(time, preasure, label = f'Radi = {radi}')
+
+p_teorica = []
+for t in time: p_teorica.append(Natoms * k * T / L**3)
+plt.plot(time, p_teorica, label = 'Teòrica', linestyle='--', color='black')
+plt.title('Pressió en funció del temps')
+plt.xlabel(r'Temps ($s$)')
+plt.ylabel(r'Pressió ($Pa$)') 
+plt.grid(True)
+
+ax = plt.gca()
+ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+ax.ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+
+plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+plt.tight_layout()
+plt.savefig('gas_esferes_dures/ged_isocor.png', dpi=300, bbox_inches='tight')
+plt.show()
