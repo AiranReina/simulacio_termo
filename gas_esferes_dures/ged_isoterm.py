@@ -23,7 +23,8 @@ k = 1.4E-23 # Boltzmann constant
 T = 300 # around room temperature
 T_termostat = 300 # temperature of the thermostat
 dt = 1E-5
-steps = 10
+steps = 100
+v_paret = 4/(dt * steps)
 
 animation = canvas( width=win, height=win, align='left')
 animation.range = L
@@ -124,8 +125,10 @@ for radi in radis:
     Ratom = radi
     step_counter = 0
     preasure = []
+    volume = []
     time = []
     
+    Lx = L
     while step_counter < steps:
         rate(300)
         # Accumulate and average histogram snapshots
@@ -184,13 +187,13 @@ for radi in radis:
     
         for i in range(Natoms):
             loc = apos[i]
-            if abs(loc.x) > L/2:
+            if abs(loc.x) > Lx/2:
                 v_old = p[i].mag / mass
                 v_termal = np.random.normal(0, np.sqrt(k * T_termostat / mass))
                 p[i].x = -sign(loc.x) * mass * abs(v_termal)
                 v_new = p[i].mag / mass
                 interchange(v_old, v_new)
-                preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
+                preasure_step.append((mass * abs(v_new - v_old)) / (dt * Lx**2))
             
             if abs(loc.y) > L/2:
                 v_old = p[i].mag / mass
@@ -209,14 +212,16 @@ for radi in radis:
                 preasure_step.append((mass * abs(v_new - v_old)) / (dt * L**2))
         
         step_counter += 1
+        Lx += v_paret * dt
         
         time.append(step_counter * dt)
         preasure.append(sum(preasure_step))
+        volume.append((L**2) * Lx)
         
     plt.plot(time, preasure, label = f'Radi = {radi}')
 
 p_teorica = []
-for t in time: p_teorica.append(Natoms * k * T / L**3)
+for v in volume: p_teorica.append(Natoms * k * T / v)
 plt.plot(time, p_teorica, label = 'Teòrica', linestyle='--', color='black')
 plt.title('Pressió en funció del temps')
 plt.xlabel(r'Temps ($s$)')
@@ -232,4 +237,15 @@ ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.tight_layout()
 plt.savefig('gas_esferes_dures/ged_isoterm.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+plt.style.use('classic')
+plt.figure(figsize=(8,8), facecolor='white')
+plt.plot(volume, p_teorica, label = 'p(V)', color='red')
+plt.title('Diagrama p-V teóric')
+plt.xlabel(r'Volum ($m^3$)')
+plt.ylabel(r'Pressió ($Pa$)') 
+plt.grid(True)
+plt.legend()
+plt.savefig('gas_esferes_dures/ged_isoterm_pV.png', dpi=300, bbox_inches='tight')
 plt.show()
