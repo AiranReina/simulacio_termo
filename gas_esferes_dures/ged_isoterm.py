@@ -24,7 +24,7 @@ T = 300 # around room temperature
 T_termostat = 300 # temperature of the thermostat
 dt = 1E-5
 steps = 100
-v_paret = 4/(dt * steps)
+v_paret = 1/(dt * steps)
 
 animation = canvas( width=win, height=win, align='left')
 animation.range = L
@@ -236,7 +236,7 @@ ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
 
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.tight_layout()
-plt.savefig('gas_esferes_dures/ged_isoterm.png', dpi=300, bbox_inches='tight')
+plt.savefig('gas_esferes_dures/ged_isoterm2.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 plt.style.use('classic')
@@ -247,5 +247,5 @@ plt.xlabel(r'Volum ($m^3$)')
 plt.ylabel(r'Pressió ($Pa$)') 
 plt.grid(True)
 plt.legend()
-plt.savefig('gas_esferes_dures/ged_isoterm_pV.png', dpi=300, bbox_inches='tight')
+plt.savefig('gas_esferes_dures/ged_isoterm_pV2.png', dpi=300, bbox_inches='tight')
 plt.show()
