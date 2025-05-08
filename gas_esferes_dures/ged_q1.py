@@ -1,5 +1,6 @@
 from vpython import *
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 # Web VPython 3.2
 
@@ -198,10 +199,22 @@ for Ratom in Radis:
 
 plt.style.use('classic')
 plt.figure(facecolor='white')
-plt.plot(Radis, temps_mitja, label='Simulació', color='blue')
-plt.plot(Radis, temps_mitja_teoric, label='Teòric', color='red')
-plt.legend()
+plt.scatter(Radis, temps_mitja, label='Simulació', color='blue')
+plt.scatter(Radis, temps_mitja_teoric, label='Teòric', color='red')
+
+formatter_x = ticker.ScalarFormatter(useMathText=True)
+formatter_x.set_powerlimits((-2, 2))  
+plt.gca().xaxis.set_major_formatter(formatter_x)
+plt.gca().ticklabel_format(axis='x', style='sci')
+
+formatter_y = ticker.ScalarFormatter(useMathText=True)
+formatter_y.set_powerlimits((-2, 2))
+plt.gca().yaxis.set_major_formatter(formatter_y)
+plt.gca().ticklabel_format(axis='y', style='sci')
+
 plt.xlabel("Radi de l'àtom (m)")
 plt.ylabel("Tiemps mitjà entre col·lisions (s)")
 plt.grid(True)
+plt.legend()
+plt.tight_layout()
 plt.show()
