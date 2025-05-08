@@ -6,7 +6,9 @@ Aquest repositori conté el material creat per Airan Reina Delgado (NIU: 1670808
 
 Arxiu: gas_esferes_dures.py
 
-anakala
+S'ha estudiat la simulació d'un gas ideal d'heli en una caixa en contacte amb un bany tèrmic. 
+
+S'ha afegit al codi el càlcul del temps mitjà entre col·lisions, tant de la simulació com el teòric, per diferents valors del radi atòmic i s'ha realitzat el gràfic corresponent. 
 
 ----------
 
@@ -14,7 +16,7 @@ anakala
 
 Arxiu: lennard_jones.py
 
-ahajkalka
+S'ha estudiat la coexistència líquid-vapor al voltant de la temperatura crítica mitjançant una simulació d'un fluid en dues caixes que representen els dos estats possibles. S'ha determinat aproximadament la temperatura crítica mitjançant l'observació del diagrama de fases de la simulació. Finalment, s'ha determinat els valors del paràmetre d'ordre i de la constant que relaciona les densitats de cada fase i la temperatura. Per fer-ho s'ha anat trobant diferents punts d'equilibri i s'ha realitzat una regressió lineal. Els valors obtinguts no difereixen significativament dels esperats.
 
 ----------
 
